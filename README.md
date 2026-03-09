@@ -1,6 +1,6 @@
 # Terminal Portfolio Website
 
-A minimalist, terminal-themed personal portfolio website that can be navigated using command-line interface commands or mouse clicks.
+A minimalist, terminal-themed personal portfolio website built with **Next.js**. Navigate using command-line interface commands or mouse clicks.
 
 ## Features
 
@@ -11,26 +11,45 @@ A minimalist, terminal-themed personal portfolio website that can be navigated u
 - 🔗 URL routing for direct access to content
 - 📝 Markdown-driven project pages — add a `.md` file, no code editing required
 - 🖼️ Inline images and links in content
+- ⚡ Built with Next.js for server-side rendering and optimized production builds
 
-## Usage
+## Prerequisites
 
-### Local Development
+- **Node.js** version 18.18.0 or later
+- **npm** (included with Node.js)
 
-For local development with full URL routing support, use the included Node.js development server:
+## Local Development
+
+### Quick Start
+
+1. Install dependencies:
+
+   ```bash
+   npm install
+   ```
+
+2. Start the development server:
+
+   ```bash
+   npm run dev
+   ```
+
+3. Open [http://localhost:3000](http://localhost:3000) in your browser.
+
+The development server supports hot-reloading — changes to components and styles are reflected immediately without a manual refresh.
+
+### Production Build (Local Testing)
+
+To test the production build locally:
 
 ```bash
-node server.js
+npm run build
+npm start
 ```
 
-This will start a server at `http://localhost:8080` that properly handles client-side routing.
+This builds the optimized production bundle and starts the Next.js production server on [http://localhost:3000](http://localhost:3000).
 
-Alternatively, you can use any static file server, but note that direct URL access (e.g., `/about`, `/projects/2024/12/15/article`) will only work with a server configured to serve `index.html` for all routes.
-
-### Simple Testing
-
-For quick testing without URL routing, you can open `index.html` directly in a browser. However, direct URL navigation won't work in this mode.
-
-### Available Commands
+### Available Commands (In the Terminal UI)
 
 - `ls` - List directory contents
 - `cd [directory]` - Change directory
@@ -41,22 +60,48 @@ For quick testing without URL routing, you can open `index.html` directly in a b
 
 ### Navigation
 
-The website will present a terminal interface where you can:
+The website presents a terminal interface where you can:
 
 - Click on directories (shown in blue) to navigate into them
 - Click on files to view their contents
 - Use the `cd` command to navigate directories
 - Use the `cat` command to view file contents
 - Use `cd ..` to go back to the parent directory
+- Use ↑/↓ arrow keys to cycle through command history
+
+## Project Structure
+
+```
+├── app/                        # Next.js App Router
+│   ├── layout.js               # Root layout (HTML shell, metadata)
+│   ├── globals.css             # Global terminal styles
+│   └── [[...slug]]/
+│       └── page.js             # Catch-all route — renders Terminal
+├── src/
+│   ├── components/
+│   │   └── Terminal.js         # Main terminal React component
+│   └── lib/
+│       └── filesystem.js       # Virtual filesystem & project loader
+├── public/
+│   └── content/
+│       └── projects/           # Markdown project files + manifest
+│           ├── manifest.json
+│           └── *.md
+├── scripts/
+│   └── update-manifest.js      # Regenerates manifest.json
+├── next.config.js
+├── jsconfig.json
+└── package.json
+```
 
 ## Adding New Pages/Articles
 
 ### Adding a Project Article (Markdown)
 
-Project pages live in `content/projects/` as Markdown files. The filename determines the date and URL slug:
+Project pages live in `public/content/projects/` as Markdown files. The filename determines the date and URL slug:
 
 ```
-content/projects/YYYY-MM-DD-my-project-name.md
+public/content/projects/YYYY-MM-DD-my-project-name.md
 ```
 
 **Steps:**
@@ -64,7 +109,7 @@ content/projects/YYYY-MM-DD-my-project-name.md
 1. Create your Markdown file:
 
    ```
-   content/projects/2025-06-01-my-new-project.md
+   public/content/projects/2025-06-01-my-new-project.md
    ```
 
    ```markdown
@@ -87,18 +132,18 @@ content/projects/YYYY-MM-DD-my-project-name.md
 2. Regenerate the manifest so the site picks it up:
 
    ```bash
-   node scripts/update-manifest.js
+   npm run update-manifest
    ```
 
 3. Refresh the browser — the project appears under `ls /home/projects`, sorted newest-first.
 
-The Markdown file is fetched and rendered in the browser on first access (lazy-loaded), so no build step is needed.
+The Markdown file is fetched and rendered in the browser on first access (lazy-loaded), so no additional build step is needed.
 
 ---
 
 ### Adding a Simple Page (like About or Contact)
 
-Non-project pages (e.g. `about`, `contact`) are still defined directly in the `fileSystem` object inside `terminal.js`:
+Non-project pages (e.g. `about`, `contact`) are defined in the `createFileSystem()` function inside `src/lib/filesystem.js`:
 
 ```javascript
 'your-page-name': {
@@ -127,7 +172,7 @@ The website supports direct URL access:
 
 ### Changing Colors
 
-Edit `style.css` to customize the terminal colors:
+Edit `app/globals.css` to customize the terminal colors:
 
 - Background: `#1e1e1e`
 - Text: `#d4d4d4`
@@ -137,111 +182,18 @@ Edit `style.css` to customize the terminal colors:
 
 ### Changing the Prompt
 
-Edit the prompt text in both `index.html` and the `updatePrompt()` function in `terminal.js`:
-
-```javascript
-document.querySelector('.prompt').textContent = `your-prompt-text$ `;
-```
-
-## Browser Compatibility
-
-This website works in all modern browsers that support:
-- ES6 JavaScript
-- CSS Grid/Flexbox
-- HTML5
+Edit the prompt text in `src/components/Terminal.js`. Search for `guest@charlesfredricks.com` and replace it with your desired prompt.
 
 ## Deployment
 
-### Static Hosting Platforms
+### Vercel (Recommended)
 
-This website can be deployed to any static hosting platform. However, you need to configure the platform to serve `index.html` for all routes to enable direct URL access.
+The easiest way to deploy a Next.js app is on [Vercel](https://vercel.com):
 
-#### Netlify
-
-Create a `_redirects` file in the root directory with:
-
-```
-/*    /index.html   200
-```
-
-#### Vercel
-
-Create a `vercel.json` file in the root directory with:
-
-```json
-{
-  "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
-  ]
-}
-```
-
-#### GitHub Pages
-
-GitHub Pages doesn't natively support client-side routing. You can use a workaround by creating a `404.html` file that redirects to `index.html`:
-
-```html
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <script>
-    sessionStorage.redirect = location.href;
-  </script>
-  <meta http-equiv="refresh" content="0;URL='/index.html'">
-</head>
-</html>
-```
-
-Then update the initialization code in `terminal.js` to check for redirected URLs.
-
-#### Apache
-
-Add this to your `.htaccess` file:
-
-```apache
-<IfModule mod_rewrite.c>
-  RewriteEngine On
-  RewriteBase /
-  RewriteRule ^index\.html$ - [L]
-  RewriteCond %{REQUEST_FILENAME} !-f
-  RewriteCond %{REQUEST_FILENAME} !-d
-  RewriteRule . /index.html [L]
-</IfModule>
-```
-
-#### Nginx
-
-Add this to your nginx configuration:
-
-```nginx
-location / {
-  try_files $uri $uri/ /index.html;
-}
-```
-
-### Node.js Hosting
-
-If you deploy to a Node.js hosting platform (like Heroku, Railway, or DigitalOcean App Platform), you can use the included `server.js`:
-
-1. Add a `package.json` file:
-
-```json
-{
-  "name": "terminal-portfolio",
-  "version": "1.0.0",
-  "description": "Terminal-themed portfolio website",
-  "main": "server.js",
-  "scripts": {
-    "start": "node server.js"
-  },
-  "engines": {
-    "node": ">=14"
-  }
-}
-```
-
-2. Deploy with `npm start` as the start command.
+1. Push your code to GitHub.
+2. Import the repository in Vercel.
+3. Vercel detects Next.js automatically — no extra configuration needed.
+4. Your site is live with automatic deployments on every push.
 
 ### AWS Lightsail (Bitnami Node.js Stack)
 
@@ -265,12 +217,13 @@ ssh -i /path/to/your-key.pem bitnami@<your-static-ip>
 
 ---
 
-#### Step 2 — Clone the Repository
+#### Step 2 — Clone the Repository and Install Dependencies
 
 ```bash
 cd /home/bitnami
 git clone https://github.com/<your-username>/charlesfredricks-dot-com.git
 cd charlesfredricks-dot-com
+npm install
 ```
 
 > If using a private repo, set up a deploy key or personal access token first.
@@ -285,7 +238,7 @@ The Bitnami Node.js stack comes with Node pre-installed. Confirm it's available:
 node -v
 ```
 
-You should see a version `>= 14`. If the command isn't found, source the Bitnami environment:
+You should see a version `>= 18.18.0`. If the command isn't found, source the Bitnami environment:
 
 ```bash
 . /opt/bitnami/scripts/setenv.sh
@@ -293,17 +246,21 @@ You should see a version `>= 14`. If the command isn't found, source the Bitnami
 
 ---
 
-#### Step 4 — Set the Port
+#### Step 4 — Build the Production Bundle
 
-The included `server.js` defaults to port `8080`. You can override this with the `PORT` environment variable. For the Apache reverse-proxy setup below, **port 8080 is fine** — keep it as is.
-
-Test that the server starts:
+Next.js requires a build step before running in production:
 
 ```bash
-node server.js
+npm run build
 ```
 
-You should see `Server running at http://localhost:8080/`. Press `Ctrl+C` to stop.
+Test that the production server starts:
+
+```bash
+npm start
+```
+
+You should see `▲ Next.js 15.x.x` and `✓ Ready in ...`. The server listens on port `3000` by default. Press `Ctrl+C` to stop.
 
 ---
 
@@ -319,7 +276,7 @@ Start the app with PM2:
 
 ```bash
 cd /home/bitnami/charlesfredricks-dot-com
-pm2 start server.js --name "portfolio"
+pm2 start npm --name "portfolio" -- start
 ```
 
 Verify it's running:
@@ -352,7 +309,7 @@ pm2 save
 
 #### Step 6 — Configure Apache as a Reverse Proxy
 
-The Bitnami stack includes Apache. You need to (a) enable proxy modules, (b) disable the Bitnami default welcome page, and (c) create a virtual host that forwards traffic to your Node.js app on port 8080.
+The Bitnami stack includes Apache. You need to (a) enable proxy modules, (b) disable the Bitnami default welcome page, and (c) create a virtual host that forwards traffic to your Next.js app on port 3000.
 
 **6a — Enable proxy modules**
 
@@ -371,7 +328,7 @@ sudo sed -i 's/^#\(LoadModule proxy_http_module\)/\1/' /opt/bitnami/apache/conf/
 
 **6b — Override the Bitnami default vhosts**
 
-The Bitnami default virtual host serves a welcome page from `/opt/bitnami/apache/htdocs/` using a `_default_` catch-all. You need to modify it so it proxies to your Node.js app instead.
+The Bitnami default virtual host serves a welcome page from `/opt/bitnami/apache/htdocs/` using a `_default_` catch-all. You need to modify it so it proxies to your Next.js app instead.
 
 > **Do NOT rename or delete** `/opt/bitnami/apache/htdocs/index.html`. If the proxy directives aren't working yet, removing it causes Apache to show a directory listing — which is a worse failure mode. If you already renamed it, restore it first:
 > ```bash
@@ -395,8 +352,8 @@ Find the `<VirtualHost _default_:80>` block. Inside it, **comment out** the `Doc
   </Directory>
 
   ProxyPreserveHost On
-  ProxyPass / http://127.0.0.1:8080/
-  ProxyPassReverse / http://127.0.0.1:8080/
+  ProxyPass / http://127.0.0.1:3000/
+  ProxyPassReverse / http://127.0.0.1:3000/
   ...
 </VirtualHost>
 ```
@@ -429,8 +386,8 @@ Paste the following (replace `yourdomain.com` with your actual domain):
   ServerAlias www.yourdomain.com
 
   ProxyPreserveHost On
-  ProxyPass / http://127.0.0.1:8080/
-  ProxyPassReverse / http://127.0.0.1:8080/
+  ProxyPass / http://127.0.0.1:3000/
+  ProxyPassReverse / http://127.0.0.1:3000/
 </VirtualHost>
 
 <VirtualHost *:443>
@@ -442,8 +399,8 @@ Paste the following (replace `yourdomain.com` with your actual domain):
   SSLCertificateKeyFile "/opt/bitnami/apache/conf/bitnami/certs/server.key"
 
   ProxyPreserveHost On
-  ProxyPass / http://127.0.0.1:8080/
-  ProxyPassReverse / http://127.0.0.1:8080/
+  ProxyPass / http://127.0.0.1:3000/
+  ProxyPassReverse / http://127.0.0.1:3000/
 </VirtualHost>
 ```
 
@@ -540,15 +497,144 @@ To deploy changes after pushing to your repo:
 ```bash
 cd /home/bitnami/charlesfredricks-dot-com
 git pull
+npm install
+npm run build
 pm2 restart portfolio
 ```
 
 If you added new project Markdown files, regenerate the manifest first:
 
 ```bash
-node scripts/update-manifest.js
+npm run update-manifest
+npm run build
 pm2 restart portfolio
 ```
+
+---
+
+### Backing Up and Restoring Let's Encrypt Certificates
+
+Let's Encrypt has [rate limits](https://letsencrypt.org/docs/rate-limits/) — most notably a limit of **5 duplicate certificates per week** per set of domain names. If you delete and recreate your Lightsail instance frequently, you can hit these limits and be temporarily blocked from obtaining new certificates.
+
+The solution is to **back up your certificate files** to a location outside the instance (e.g. your local machine, S3 bucket, or another server) so you can restore them on a fresh instance instead of requesting new ones.
+
+#### What to Back Up
+
+The `bncert-tool` uses [Lego](https://go-acme.github.io/lego/) (the Let's Encrypt client bundled with Bitnami) behind the scenes. The key files live in these directories:
+
+| Path | Contents |
+|------|----------|
+| `/opt/bitnami/letsencrypt/certificates/` | The issued certificate (`.crt`), private key (`.key`), and issuer cert (`.issuer.crt`) |
+| `/opt/bitnami/apache/conf/bitnami/certs/` | Symlinks or copies that Apache actually reads at runtime |
+| `/opt/bitnami/letsencrypt/accounts/` | Your Let's Encrypt account registration (ACME account key) |
+
+> **Important:** The `accounts/` directory contains the private key tied to your Let's Encrypt account. Without it, Lego cannot renew or revoke certificates it previously issued. Always include it in your backup.
+
+#### Backing Up (from the Lightsail Instance)
+
+Create a compressed archive of all three directories:
+
+```bash
+sudo tar czf /home/bitnami/letsencrypt-backup.tar.gz \
+  /opt/bitnami/letsencrypt/certificates/ \
+  /opt/bitnami/letsencrypt/accounts/ \
+  /opt/bitnami/apache/conf/bitnami/certs/
+```
+
+Then copy the archive to your local machine (or an S3 bucket):
+
+```bash
+# From your local machine:
+scp -i /path/to/your-key.pem bitnami@<your-static-ip>:/home/bitnami/letsencrypt-backup.tar.gz ./
+
+# Or to an S3 bucket (if AWS CLI is configured on the instance):
+aws s3 cp /home/bitnami/letsencrypt-backup.tar.gz s3://your-bucket/backups/
+```
+
+> **Tip:** Automate this with a cron job that runs after each renewal. The Bitnami auto-renewal cron is typically at `/etc/cron.d/bitnami-letsencrypt` — you can add a post-renewal hook or a separate cron entry:
+> ```bash
+> # Example: back up certs to S3 daily at 4:00 AM
+> 0 4 * * * root tar czf /tmp/le-backup.tar.gz /opt/bitnami/letsencrypt/certificates/ /opt/bitnami/letsencrypt/accounts/ /opt/bitnami/apache/conf/bitnami/certs/ && aws s3 cp /tmp/le-backup.tar.gz s3://your-bucket/backups/letsencrypt-backup.tar.gz && rm /tmp/le-backup.tar.gz
+> ```
+
+#### Restoring on a New Instance
+
+After creating a fresh Lightsail instance and completing Steps 1–6 (clone, build, PM2, Apache proxy), restore the certificates **instead of** running `bncert-tool`:
+
+1. Copy the backup archive to the new instance:
+
+   ```bash
+   # From your local machine:
+   scp -i /path/to/your-key.pem ./letsencrypt-backup.tar.gz bitnami@<new-static-ip>:/home/bitnami/
+
+   # Or from S3:
+   aws s3 cp s3://your-bucket/backups/letsencrypt-backup.tar.gz /home/bitnami/
+   ```
+
+2. Extract the archive (this restores certificates, keys, and the ACME account):
+
+   ```bash
+   sudo tar xzf /home/bitnami/letsencrypt-backup.tar.gz -C /
+   ```
+
+3. Verify the certificate files are in place:
+
+   ```bash
+   ls -la /opt/bitnami/letsencrypt/certificates/
+   ls -la /opt/bitnami/apache/conf/bitnami/certs/
+   ```
+
+   You should see your domain's `.crt` and `.key` files.
+
+4. Make sure your Apache vhost points to the correct certificate paths. If the `bncert-tool` was used on the original instance, it likely updated `bitnami.conf` to point to the Lego-managed certificate. Check:
+
+   ```bash
+   grep -i sslcertificate /opt/bitnami/apache/conf/bitnami/bitnami.conf
+   ```
+
+   If the paths don't match the restored files, update them:
+
+   ```bash
+   sudo nano /opt/bitnami/apache/conf/bitnami/bitnami.conf
+   ```
+
+   Set the paths to:
+   ```apache
+   SSLCertificateFile "/opt/bitnami/letsencrypt/certificates/yourdomain.com.crt"
+   SSLCertificateKeyFile "/opt/bitnami/letsencrypt/certificates/yourdomain.com.key"
+   ```
+
+   Do the same in your domain vhost file (`/opt/bitnami/apache/conf/vhosts/portfolio-vhost.conf`).
+
+5. Restart Apache:
+
+   ```bash
+   sudo /opt/bitnami/ctlscript.sh restart apache
+   ```
+
+6. Verify HTTPS works by visiting `https://yourdomain.com`.
+
+7. Re-enable automatic renewal. The `bncert-tool` creates a cron job for this, but on a fresh instance it won't exist. Create it manually:
+
+   ```bash
+   sudo nano /etc/cron.d/bitnami-letsencrypt
+   ```
+
+   Add:
+
+   ```
+   # Renew Let's Encrypt certificates at 3:01 AM on the 1st and 15th of each month
+   1 3 1,15 * * root /opt/bitnami/letsencrypt/lego --path /opt/bitnami/letsencrypt --email="your-email@example.com" --domains="yourdomain.com" --domains="www.yourdomain.com" --http --http.webroot /opt/bitnami/apache/htdocs renew && /opt/bitnami/ctlscript.sh restart apache
+   ```
+
+   > Replace `your-email@example.com` and domain names with your actual values. The `--http.webroot` path may vary — check how the original cron was configured if you still have access.
+
+#### Rate Limit Tips
+
+- **Back up early and often.** The first thing to do after a successful `bncert-tool` run is back up.
+- **Use staging for testing.** If you're experimenting with SSL setup, use Let's Encrypt's [staging environment](https://letsencrypt.org/docs/staging-environment/) which has much higher rate limits. Lego supports this with the `--server` flag.
+- **Duplicate certificate limit** is 5 per week for the exact same set of domain names. If you hit it, you must wait up to 7 days — restoring from backup avoids this entirely.
+- **Failed validation limit** is 5 per hour per account per hostname. Double-check DNS and firewall before requesting a certificate.
 
 ---
 
@@ -600,7 +686,7 @@ This means Apache is serving the `/opt/bitnami/apache/htdocs/` directory directl
 
 **The site works on the static IP but not the domain**
 
-This usually means you are hitting Node.js on port 8080 directly via the IP (bypassing Apache), while Apache is still serving its default content for your domain. Follow Step 6 from the beginning — 6a (proxy modules), then 6b (modify `bitnami.conf`), then restart and verify before moving to 6c.
+This usually means you are hitting Node.js on port 3000 directly via the IP (bypassing Apache), while Apache is still serving its default content for your domain. Follow Step 6 from the beginning — 6a (proxy modules), then 6b (modify `bitnami.conf`), then restart and verify before moving to 6c.
 
 **PM2 doesn't restart after reboot**
 

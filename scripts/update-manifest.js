@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * Scans content/projects/ for .md files, sorts them descending by date
+ * Scans public/content/projects/ for .md files, sorts them descending by date
  * (filename format: YYYY-MM-DD-slug.md), and writes manifest.json.
  *
  * Usage: node scripts/update-manifest.js
@@ -10,7 +10,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const projectsDir = path.join(__dirname, '..', 'content', 'projects');
+const projectsDir = path.join(__dirname, '..', 'public', 'content', 'projects');
 const manifestPath = path.join(projectsDir, 'manifest.json');
 
 const files = fs.readdirSync(projectsDir)
