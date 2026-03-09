@@ -446,21 +446,40 @@ After it completes, the certificate is issued and `bitnami.conf` is updated — 
 
 ---
 
-#### Step 7b — Update the Custom Vhost with the Let's Encrypt Certificate
+#### Step 7b — Restore the Custom Vhost with the Let's Encrypt Certificate
 
-The `bncert-tool` only updates `/opt/bitnami/apache/conf/bitnami/bitnami.conf`. The named vhost you created in Step 6c still points to the self-signed certificate. Because Apache prefers a named vhost over the `_default_:443` catch-all, HTTPS traffic hits `portfolio-vhost.conf` — and visitors see a browser security warning — until you update it.
+The `bncert-tool` clears `portfolio-vhost.conf` as part of its process and only updates `/opt/bitnami/apache/conf/bitnami/bitnami.conf`. This means the proxy directives and SSL config you added in Step 6c are gone. Because Apache prefers a named vhost over the `_default_:443` catch-all, HTTPS traffic hits this now-empty `portfolio-vhost.conf` — serving the Bitnami default page with no proxy — until you restore the full configuration.
 
-Open the vhost file:
+Open the file:
 
 ```bash
 sudo nano /opt/bitnami/apache/conf/vhosts/portfolio-vhost.conf
 ```
 
-Replace the two `SSLCertificate*` lines with the paths that `bncert-tool` just created:
+Replace the **entire contents** of the file with the following (substituting your actual domain):
 
 ```apache
-SSLCertificateFile "/opt/bitnami/letsencrypt/certificates/yourdomain.com.crt"
-SSLCertificateKeyFile "/opt/bitnami/letsencrypt/certificates/yourdomain.com.key"
+<VirtualHost *:80>
+  ServerName yourdomain.com
+  ServerAlias www.yourdomain.com
+
+  ProxyPreserveHost On
+  ProxyPass / http://127.0.0.1:3000/
+  ProxyPassReverse / http://127.0.0.1:3000/
+</VirtualHost>
+
+<VirtualHost *:443>
+  ServerName yourdomain.com
+  ServerAlias www.yourdomain.com
+
+  SSLEngine on
+  SSLCertificateFile "/opt/bitnami/letsencrypt/certificates/yourdomain.com.crt"
+  SSLCertificateKeyFile "/opt/bitnami/letsencrypt/certificates/yourdomain.com.key"
+
+  ProxyPreserveHost On
+  ProxyPass / http://127.0.0.1:3000/
+  ProxyPassReverse / http://127.0.0.1:3000/
+</VirtualHost>
 ```
 
 Save and exit. Test and restart Apache:
@@ -470,7 +489,7 @@ sudo /opt/bitnami/apache/bin/apachectl configtest
 sudo /opt/bitnami/ctlscript.sh restart apache
 ```
 
-Visit `https://yourdomain.com` — the browser should show a valid certificate (padlock, no security warning).
+Visit `https://yourdomain.com` — the browser should show your portfolio with a valid certificate (padlock, no security warning).
 
 ---
 
