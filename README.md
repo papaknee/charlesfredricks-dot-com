@@ -404,7 +404,7 @@ Paste the following (replace `yourdomain.com` with your actual domain):
 </VirtualHost>
 ```
 
-> **Note:** The SSL paths above point to Bitnami's default self-signed certificate. This is a placeholder — Step 7 will replace them with a real Let's Encrypt certificate via the `bncert-tool`.
+> **Note:** The SSL paths above point to Bitnami's default self-signed certificate and are **temporary placeholders**. After `bncert-tool` runs in Step 7, it updates `bitnami.conf` but does **not** update this custom vhost file. Because Apache matches a named vhost over the `_default_:443` catch-all, HTTPS traffic is served by this vhost — with the self-signed cert — until you complete Step 7b.
 
 Save and exit.
 
@@ -442,7 +442,35 @@ The interactive wizard will:
 4. Obtain and install the certificate
 5. Configure automatic renewal via a cron job
 
-After it completes, verify HTTPS works by visiting `https://yourdomain.com`.
+After it completes, the certificate is issued and `bitnami.conf` is updated — but the custom vhost still holds the old self-signed paths. Complete Step 7b to fix that.
+
+---
+
+#### Step 7b — Update the Custom Vhost with the Let's Encrypt Certificate
+
+The `bncert-tool` only updates `/opt/bitnami/apache/conf/bitnami/bitnami.conf`. The named vhost you created in Step 6c still points to the self-signed certificate. Because Apache prefers a named vhost over the `_default_:443` catch-all, HTTPS traffic hits `portfolio-vhost.conf` — and visitors see a browser security warning — until you update it.
+
+Open the vhost file:
+
+```bash
+sudo nano /opt/bitnami/apache/conf/vhosts/portfolio-vhost.conf
+```
+
+Replace the two `SSLCertificate*` lines with the paths that `bncert-tool` just created:
+
+```apache
+SSLCertificateFile "/opt/bitnami/letsencrypt/certificates/yourdomain.com.crt"
+SSLCertificateKeyFile "/opt/bitnami/letsencrypt/certificates/yourdomain.com.key"
+```
+
+Save and exit. Test and restart Apache:
+
+```bash
+sudo /opt/bitnami/apache/bin/apachectl configtest
+sudo /opt/bitnami/ctlscript.sh restart apache
+```
+
+Visit `https://yourdomain.com` — the browser should show a valid certificate (padlock, no security warning).
 
 ---
 
