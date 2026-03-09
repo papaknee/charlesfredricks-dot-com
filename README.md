@@ -369,25 +369,31 @@ sudo sed -i 's/^#\(LoadModule proxy_module\)/\1/' /opt/bitnami/apache/conf/httpd
 sudo sed -i 's/^#\(LoadModule proxy_http_module\)/\1/' /opt/bitnami/apache/conf/httpd.conf
 ```
 
-**6b — Disable the Bitnami default welcome page**
+**6b — Override the Bitnami default vhosts**
 
-The Bitnami default virtual host serves a welcome page from `/opt/bitnami/apache/htdocs/`. It uses a `_default_` catch-all that intercepts requests meant for your domain. Disable it by renaming the default page:
+The Bitnami default virtual host serves a welcome page from `/opt/bitnami/apache/htdocs/` using a `_default_` catch-all. You need to modify it so it proxies to your Node.js app instead.
 
-```bash
-sudo mv /opt/bitnami/apache/htdocs/index.html /opt/bitnami/apache/htdocs/index.html.disabled
-```
+> **Do NOT rename or delete** `/opt/bitnami/apache/htdocs/index.html`. If the proxy directives aren't working yet, removing it causes Apache to show a directory listing — which is a worse failure mode. If you already renamed it, restore it first:
+> ```bash
+> sudo mv /opt/bitnami/apache/htdocs/index.html.disabled /opt/bitnami/apache/htdocs/index.html
+> ```
 
-Then update the default Bitnami vhost so it proxies to your app instead of serving static files. Open the Bitnami configuration file:
+Open the Bitnami configuration file:
 
 ```bash
 sudo nano /opt/bitnami/apache/conf/bitnami/bitnami.conf
 ```
 
-Find the `<VirtualHost _default_:80>` block. Inside it, **comment out** the `DocumentRoot` line and add proxy directives:
+Find the `<VirtualHost _default_:80>` block. Inside it, **comment out** the `DocumentRoot` line, add `Options -Indexes` as a safety net (prevents directory listings if the proxy ever fails), and add proxy directives:
 
 ```apache
 <VirtualHost _default_:80>
   # DocumentRoot "/opt/bitnami/apache/htdocs"
+
+  <Directory "/opt/bitnami/apache/htdocs">
+    Options -Indexes
+  </Directory>
+
   ProxyPreserveHost On
   ProxyPass / http://127.0.0.1:8080/
   ProxyPassReverse / http://127.0.0.1:8080/
@@ -395,9 +401,17 @@ Find the `<VirtualHost _default_:80>` block. Inside it, **comment out** the `Doc
 </VirtualHost>
 ```
 
-Do the same for the `<VirtualHost _default_:443>` block if one exists (leave the SSL directives in place — only change the `DocumentRoot` and add the proxy lines).
+Do the same for the `<VirtualHost _default_:443>` block if one exists — comment out `DocumentRoot`, add the `Options -Indexes` directory block, and add the proxy lines. **Keep all existing SSL directives** (`SSLEngine`, certificate paths, etc.) in place.
 
 Save and exit (`Ctrl+O`, `Enter`, `Ctrl+X`).
+
+Restart Apache to test the change in isolation before proceeding:
+
+```bash
+sudo /opt/bitnami/ctlscript.sh restart apache
+```
+
+Visit your domain. If you see your site instead of the Bitnami welcome page, the proxy is working and you can move on to 6c. If you still see the welcome page, double-check that the `DocumentRoot` line is commented out and that the proxy modules from 6a are loaded.
 
 **6c — Create a named virtual host for your domain**
 
@@ -566,9 +580,27 @@ pm2 restart portfolio
    sudo /opt/bitnami/ctlscript.sh restart apache
    ```
 
+**I see "Index of /" with a directory listing**
+
+This means Apache is serving the `/opt/bitnami/apache/htdocs/` directory directly instead of proxying. The most likely causes:
+
+1. The `index.html` file in `htdocs` was renamed or deleted but the proxy directives aren't active. Restore it first:
+   ```bash
+   sudo mv /opt/bitnami/apache/htdocs/index.html.disabled /opt/bitnami/apache/htdocs/index.html
+   ```
+
+2. Ensure the proxy modules are loaded (Step 6a) and that `bitnami.conf` has `DocumentRoot` commented out with proxy directives added (Step 6b).
+
+3. Add `Options -Indexes` to the `htdocs` directory block in `bitnami.conf` to prevent directory listings as a safety net (shown in Step 6b).
+
+4. Restart Apache and test again:
+   ```bash
+   sudo /opt/bitnami/ctlscript.sh restart apache
+   ```
+
 **The site works on the static IP but not the domain**
 
-This means Node.js is running but Apache isn't proxying correctly. The most common cause is that you're hitting Node.js on port 8080 directly via the IP (bypassing Apache). Follow Step 6 from the beginning, including 6a and 6b.
+This usually means you are hitting Node.js on port 8080 directly via the IP (bypassing Apache), while Apache is still serving its default content for your domain. Follow Step 6 from the beginning — 6a (proxy modules), then 6b (modify `bitnami.conf`), then restart and verify before moving to 6c.
 
 **PM2 doesn't restart after reboot**
 
