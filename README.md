@@ -352,9 +352,56 @@ pm2 save
 
 #### Step 6 — Configure Apache as a Reverse Proxy
 
-The Bitnami stack includes Apache. Configure it to proxy incoming HTTP/HTTPS traffic to your Node.js app on port 8080.
+The Bitnami stack includes Apache. You need to (a) enable proxy modules, (b) disable the Bitnami default welcome page, and (c) create a virtual host that forwards traffic to your Node.js app on port 8080.
 
-Create a new virtual host configuration file:
+**6a — Enable proxy modules**
+
+Check whether the modules are already loaded:
+
+```bash
+/opt/bitnami/apache/bin/apachectl -M 2>&1 | grep proxy
+```
+
+If you see `proxy_module` and `proxy_http_module` in the output, skip to 6b. Otherwise, uncomment them in `httpd.conf`:
+
+```bash
+sudo sed -i 's/^#\(LoadModule proxy_module\)/\1/' /opt/bitnami/apache/conf/httpd.conf
+sudo sed -i 's/^#\(LoadModule proxy_http_module\)/\1/' /opt/bitnami/apache/conf/httpd.conf
+```
+
+**6b — Disable the Bitnami default welcome page**
+
+The Bitnami default virtual host serves a welcome page from `/opt/bitnami/apache/htdocs/`. It uses a `_default_` catch-all that intercepts requests meant for your domain. Disable it by renaming the default page:
+
+```bash
+sudo mv /opt/bitnami/apache/htdocs/index.html /opt/bitnami/apache/htdocs/index.html.disabled
+```
+
+Then update the default Bitnami vhost so it proxies to your app instead of serving static files. Open the Bitnami configuration file:
+
+```bash
+sudo nano /opt/bitnami/apache/conf/bitnami/bitnami.conf
+```
+
+Find the `<VirtualHost _default_:80>` block. Inside it, **comment out** the `DocumentRoot` line and add proxy directives:
+
+```apache
+<VirtualHost _default_:80>
+  # DocumentRoot "/opt/bitnami/apache/htdocs"
+  ProxyPreserveHost On
+  ProxyPass / http://127.0.0.1:8080/
+  ProxyPassReverse / http://127.0.0.1:8080/
+  ...
+</VirtualHost>
+```
+
+Do the same for the `<VirtualHost _default_:443>` block if one exists (leave the SSL directives in place — only change the `DocumentRoot` and add the proxy lines).
+
+Save and exit (`Ctrl+O`, `Enter`, `Ctrl+X`).
+
+**6c — Create a named virtual host for your domain**
+
+This ensures Apache matches your domain explicitly:
 
 ```bash
 sudo nano /opt/bitnami/apache/conf/vhosts/portfolio-vhost.conf
@@ -371,11 +418,28 @@ Paste the following (replace `yourdomain.com` with your actual domain):
   ProxyPass / http://127.0.0.1:8080/
   ProxyPassReverse / http://127.0.0.1:8080/
 </VirtualHost>
+
+<VirtualHost *:443>
+  ServerName yourdomain.com
+  ServerAlias www.yourdomain.com
+
+  SSLEngine on
+  SSLCertificateFile "/opt/bitnami/apache/conf/bitnami/certs/server.crt"
+  SSLCertificateKeyFile "/opt/bitnami/apache/conf/bitnami/certs/server.key"
+
+  ProxyPreserveHost On
+  ProxyPass / http://127.0.0.1:8080/
+  ProxyPassReverse / http://127.0.0.1:8080/
+</VirtualHost>
 ```
 
-Save and exit (`Ctrl+O`, `Enter`, `Ctrl+X`).
+> **Note:** The SSL paths above point to Bitnami's default self-signed certificate. This is a placeholder — Step 7 will replace them with a real Let's Encrypt certificate via the `bncert-tool`.
 
-Verify the Apache configuration is valid:
+Save and exit.
+
+**6d — Test and restart Apache**
+
+Verify the configuration is valid:
 
 ```bash
 sudo /opt/bitnami/apache/bin/apachectl configtest
@@ -387,7 +451,7 @@ You should see `Syntax OK`. Now restart Apache:
 sudo /opt/bitnami/ctlscript.sh restart apache
 ```
 
-At this point, visiting `http://yourdomain.com` should serve the site.
+At this point, visiting `http://yourdomain.com` should serve the site (not the Bitnami welcome page).
 
 ---
 
@@ -470,6 +534,53 @@ If you added new project Markdown files, regenerate the manifest first:
 ```bash
 node scripts/update-manifest.js
 pm2 restart portfolio
+```
+
+---
+
+#### Troubleshooting
+
+**I see the Bitnami default page instead of my site**
+
+1. Verify proxy modules are loaded:
+   ```bash
+   /opt/bitnami/apache/bin/apachectl -M 2>&1 | grep proxy
+   ```
+   You need both `proxy_module` and `proxy_http_module`.
+
+2. Verify your vhost is being loaded:
+   ```bash
+   /opt/bitnami/apache/bin/apachectl -S 2>&1 | grep yourdomain
+   ```
+   You should see your domain listed. If not, check that the `Include` line for the vhosts directory exists in `bitnami.conf`:
+   ```bash
+   grep -r "vhosts" /opt/bitnami/apache/conf/bitnami/bitnami.conf
+   ```
+
+3. Make sure the `_default_` vhosts in `bitnami.conf` are not still serving static files — the `DocumentRoot` lines should be commented out and proxy directives added per Step 6b.
+
+4. Check whether your browser is redirecting to HTTPS. If you only configured a port-80 vhost, HTTPS requests will still hit the Bitnami default SSL vhost. Follow Step 6c to add a port-443 vhost.
+
+5. Restart Apache after every change:
+   ```bash
+   sudo /opt/bitnami/ctlscript.sh restart apache
+   ```
+
+**The site works on the static IP but not the domain**
+
+This means Node.js is running but Apache isn't proxying correctly. The most common cause is that you're hitting Node.js on port 8080 directly via the IP (bypassing Apache). Follow Step 6 from the beginning, including 6a and 6b.
+
+**PM2 doesn't restart after reboot**
+
+Make sure you ran both of these:
+```bash
+pm2 startup systemd   # then run the sudo command it prints
+pm2 save
+```
+
+Verify with:
+```bash
+systemctl status pm2-bitnami
 ```
 
 ## License
