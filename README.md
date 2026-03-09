@@ -243,6 +243,235 @@ If you deploy to a Node.js hosting platform (like Heroku, Railway, or DigitalOce
 
 2. Deploy with `npm start` as the start command.
 
+### AWS Lightsail (Bitnami Node.js Stack)
+
+This section covers deploying the site to an AWS Lightsail instance running the **Bitnami Node.js** stack. It assumes you have already:
+
+- Created a Lightsail instance using the **Node.js (Bitnami)** blueprint
+- Attached a static IP to the instance
+- Configured your DNS zone and pointed your domain's A record to the static IP
+
+What follows are the steps to perform **after SSHing into the Lightsail server**.
+
+---
+
+#### Step 1 — SSH into the Instance
+
+Use the Lightsail browser-based SSH client, or connect from your local terminal:
+
+```bash
+ssh -i /path/to/your-key.pem bitnami@<your-static-ip>
+```
+
+---
+
+#### Step 2 — Clone the Repository
+
+```bash
+cd /home/bitnami
+git clone https://github.com/<your-username>/charlesfredricks-dot-com.git
+cd charlesfredricks-dot-com
+```
+
+> If using a private repo, set up a deploy key or personal access token first.
+
+---
+
+#### Step 3 — Verify Node.js
+
+The Bitnami Node.js stack comes with Node pre-installed. Confirm it's available:
+
+```bash
+node -v
+```
+
+You should see a version `>= 14`. If the command isn't found, source the Bitnami environment:
+
+```bash
+. /opt/bitnami/scripts/setenv.sh
+```
+
+---
+
+#### Step 4 — Set the Port
+
+The included `server.js` defaults to port `8080`. You can override this with the `PORT` environment variable. For the Apache reverse-proxy setup below, **port 8080 is fine** — keep it as is.
+
+Test that the server starts:
+
+```bash
+node server.js
+```
+
+You should see `Server running at http://localhost:8080/`. Press `Ctrl+C` to stop.
+
+---
+
+#### Step 5 — Install PM2 (Process Manager)
+
+PM2 keeps the Node.js process running in the background and restarts it automatically if it crashes or the instance reboots.
+
+```bash
+sudo npm install -g pm2
+```
+
+Start the app with PM2:
+
+```bash
+cd /home/bitnami/charlesfredricks-dot-com
+pm2 start server.js --name "portfolio"
+```
+
+Verify it's running:
+
+```bash
+pm2 status
+```
+
+You should see the `portfolio` process with status `online`.
+
+Configure PM2 to start on boot:
+
+```bash
+pm2 startup systemd
+```
+
+PM2 will print a command prefixed with `sudo` — **copy and run that exact command**. It will look something like:
+
+```bash
+sudo env PATH=$PATH:/opt/bitnami/node/bin pm2 startup systemd -u bitnami --hp /home/bitnami
+```
+
+Then save the current process list so PM2 restores it on reboot:
+
+```bash
+pm2 save
+```
+
+---
+
+#### Step 6 — Configure Apache as a Reverse Proxy
+
+The Bitnami stack includes Apache. Configure it to proxy incoming HTTP/HTTPS traffic to your Node.js app on port 8080.
+
+Create a new virtual host configuration file:
+
+```bash
+sudo nano /opt/bitnami/apache/conf/vhosts/portfolio-vhost.conf
+```
+
+Paste the following (replace `yourdomain.com` with your actual domain):
+
+```apache
+<VirtualHost *:80>
+  ServerName yourdomain.com
+  ServerAlias www.yourdomain.com
+
+  ProxyPreserveHost On
+  ProxyPass / http://127.0.0.1:8080/
+  ProxyPassReverse / http://127.0.0.1:8080/
+</VirtualHost>
+```
+
+Save and exit (`Ctrl+O`, `Enter`, `Ctrl+X`).
+
+Verify the Apache configuration is valid:
+
+```bash
+sudo /opt/bitnami/apache/bin/apachectl configtest
+```
+
+You should see `Syntax OK`. Now restart Apache:
+
+```bash
+sudo /opt/bitnami/ctlscript.sh restart apache
+```
+
+At this point, visiting `http://yourdomain.com` should serve the site.
+
+---
+
+#### Step 7 — Enable HTTPS with Let's Encrypt
+
+Bitnami includes a helper tool for obtaining free SSL certificates via Let's Encrypt.
+
+```bash
+sudo /opt/bitnami/bncert-tool
+```
+
+The interactive wizard will:
+
+1. Ask for your domain(s) — enter `yourdomain.com www.yourdomain.com`
+2. Ask whether to redirect HTTP to HTTPS — select **Yes**
+3. Ask whether to redirect www to non-www (or vice-versa) — choose your preference
+4. Obtain and install the certificate
+5. Configure automatic renewal via a cron job
+
+After it completes, verify HTTPS works by visiting `https://yourdomain.com`.
+
+---
+
+#### Step 8 — Open Firewall Ports
+
+In the **Lightsail console** (not on the server), go to your instance's **Networking** tab and ensure these ports are open:
+
+| Port | Protocol | Description |
+|------|----------|-------------|
+| 22   | TCP      | SSH         |
+| 80   | TCP      | HTTP        |
+| 443  | TCP      | HTTPS       |
+
+These are typically open by default on Bitnami blueprints, but verify to be safe.
+
+---
+
+#### Step 9 — Verify Everything Survives a Reboot
+
+Reboot the instance to confirm the app starts automatically:
+
+```bash
+sudo reboot
+```
+
+Wait a minute, then SSH back in and check:
+
+```bash
+pm2 status
+```
+
+The `portfolio` process should be `online`. Visit your domain in a browser to confirm.
+
+---
+
+#### Useful PM2 Commands
+
+| Command | Description |
+|---------|-------------|
+| `pm2 status` | Show all running processes |
+| `pm2 logs portfolio` | View live logs |
+| `pm2 restart portfolio` | Restart the app |
+| `pm2 stop portfolio` | Stop the app |
+| `pm2 delete portfolio` | Remove from PM2 |
+
+---
+
+#### Updating the Site
+
+To deploy changes after pushing to your repo:
+
+```bash
+cd /home/bitnami/charlesfredricks-dot-com
+git pull
+pm2 restart portfolio
+```
+
+If you added new project Markdown files, regenerate the manifest first:
+
+```bash
+node scripts/update-manifest.js
+pm2 restart portfolio
+```
+
 ## License
 
 Free to use and modify for your personal portfolio.
