@@ -1,0 +1,24 @@
+{
+  "name": "charlesfredricks-dot-com",
+  "version": "2.0.0",
+  "description": "A minimalist, terminal-themed personal portfolio website built with Next.js.",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "update-manifest": "node scripts/update-manifest.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/papaknee/charlesfredricks-dot-com.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "marked": "^17.0.4",
+    "next": "^15.3.9",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4"
+  }
+}
