@@ -1,8 +1,8 @@
 import './globals.css';
 
 export const metadata = {
-  title: 'charlesfredricks.com, least important site on the internet',
-  description: 'A minimalist, terminal-themed personal portfolio website.',
+  title: 'charlesfredricks.com, a very unimportant website',
+  description: 'personal website of charles fredricks',
 };
 
 export default function RootLayout({ children }) {

@@ -9,14 +9,14 @@ export function createFileSystem() {
           content: `<h1>Personal Site of Charles Fredricks</h1>
 <div class="article-content">
 <p>I'm a person, based in Washington State with varied interests and hobbies.</p>
-<p>This website is designed to mimic a terminal experience</p>
+<p>This dumb website is designed to mimic a unix terminal experience</p>
 <p>Explore using commands like:</p>
 <ul>
-  <li>ls - list directory contents</li>
-  <li>cd [directory] - change directory</li>
-  <li>cat [file] - display file contents</li>
-  <li>clear - clear the terminal</li>
-  <li>help - show available commands</li>
+  <li>  ls - list directory contents</li>
+  <li>  cd [directory] - change directory</li>
+  <li>  cat [file] - display file contents</li>
+  <li>  clear - clear the terminal</li>
+  <li>  help - show available commands</li>
 </ul>
 </div>`,
         },
@@ -24,7 +24,7 @@ export function createFileSystem() {
           type: 'file',
           content: `<h1>Contact Information</h1>
 <div class="article-content">
-<p>If you must reach out, do so through one of these channels:</p>
+<p>If you must reach out, do so on one of these channels:</p>
 <p>Email: <a href="mailto:charles@charlesfredricks.com">charles@charlesfredricks.com</a></p>
 <p>GitHub: <a href="https://github.com/papaknee" target="_blank">github.com/papaknee</a></p>
 <p>LinkedIn: <a href="https://www.linkedin.com/in/charles-fredricks-80411526" target="_blank">https://www.linkedin.com/in/charles-fredricks-80411526</a></p>
